@@ -9,10 +9,12 @@ namespace PinchZoomInjector;
 /// </summary>
 internal sealed class TouchMarkerWindow : Form
 {
-    private const int WS_EX_NOACTIVATE = 0x08000000; // フォーカスを奪わない
-    private const int WS_EX_TRANSPARENT = 0x00000020; // マウス操作を下のウィンドウへ透過
-    private const int WS_EX_TOOLWINDOW = 0x00000080;  // タスクバー/Alt+Tabに出さない
-    private const int WS_EX_LAYERED = 0x00080000;
+    private const int WS_EX_TOPMOST = 0x00000008;      // 常に最前面
+    private const int WS_EX_NOACTIVATE = 0x08000000;   // フォーカスを奪わない
+    private const int WS_EX_TRANSPARENT = 0x00000020;  // マウス操作を下のウィンドウへ透過
+    private const int WS_EX_TOOLWINDOW = 0x00000080;   // タスクバー/Alt+Tabに出さない
+    // WS_EX_LAYERED は SetLayeredWindowAttributes 等で不透明度を明示しないと
+    // 何も描画されず完全に透明になる。単純な不透明表示だけなら不要なので外す。
 
     private const int MarkerSize = 24;
 
@@ -37,7 +39,7 @@ internal sealed class TouchMarkerWindow : Form
         get
         {
             var cp = base.CreateParams;
-            cp.ExStyle |= WS_EX_NOACTIVATE | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_LAYERED;
+            cp.ExStyle |= WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW;
             return cp;
         }
     }
@@ -52,6 +54,7 @@ internal sealed class TouchMarkerWindow : Form
         if (!Visible)
         {
             Show();
+            TopMost = true;
         }
     }
 
