@@ -132,4 +132,12 @@ internal static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool InjectTouchInput(uint count, [In] POINTER_TOUCH_INFO[] contacts);
+
+    // Per-Monitor V2 DPI Aware に設定し、GetCursorPos/InjectTouchInput が扱う
+    // 座標系をディスプレイスケーリングに関わらず物理ピクセルで一致させる。
+    public static readonly IntPtr DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = new(-4);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
 }

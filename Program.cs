@@ -35,6 +35,10 @@ internal static class Program
     [STAThread]
     private static void Main()
     {
+        // ディスプレイスケーリング(125%/150%等)環境で GetCursorPos と
+        // InjectTouchInput の座標系がズレないよう、最初に明示的に設定する。
+        NativeMethods.SetProcessDpiAwarenessContext(NativeMethods.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
         if (!NativeMethods.InitializeTouchInjection(2, NativeMethods.TOUCH_FEEDBACK_NONE))
         {
             Console.WriteLine($"InitializeTouchInjection に失敗しました: 0x{Marshal.GetLastWin32Error():X8}");
