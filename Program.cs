@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Runtime.InteropServices;
 
 namespace PinchZoomInjector;
@@ -18,6 +19,10 @@ internal static class Program
 
     private static readonly PinchSimulator Pinch = new();
     private static readonly System.Windows.Forms.Timer AnimationTimer = new() { Interval = TickIntervalMs };
+
+    // 解析用: 実際に注入している2点のタッチ座標を可視化するマーカー
+    private static readonly TouchMarkerWindow LeftMarker = new(Color.Red);
+    private static readonly TouchMarkerWindow RightMarker = new(Color.DodgerBlue);
 
     private static bool _f13Down;
     private static POINT _center;
@@ -69,6 +74,18 @@ internal static class Program
         System.Windows.Forms.Application.Run();
     }
 
+    private static void UpdateMarkers(int centerX, int centerY, double radius)
+    {
+        LeftMarker.MoveToCenter(centerX - (int)radius, centerY);
+        RightMarker.MoveToCenter(centerX + (int)radius, centerY);
+    }
+
+    private static void HideMarkers()
+    {
+        LeftMarker.HideMarker();
+        RightMarker.HideMarker();
+    }
+
     private static void AnimationTick()
     {
         // リレーで End() 済みの tick では IsActive が false になるが、
@@ -81,6 +98,7 @@ internal static class Program
         if (_pendingRelayDown)
         {
             Pinch.Begin(_center.X, _center.Y, _currentRadius);
+            UpdateMarkers(_center.X, _center.Y, _currentRadius);
             _pendingRelayDown = false;
             if (VerboseLogging)
             {
@@ -94,6 +112,7 @@ internal static class Program
         {
             _currentRadius += diff * EaseFactor;
             Pinch.Update(_center.X, _center.Y, _currentRadius);
+            UpdateMarkers(_center.X, _center.Y, _currentRadius);
             if (VerboseLogging)
             {
                 Console.WriteLine($"[Update] currentRadius={_currentRadius:F1}");
@@ -134,6 +153,7 @@ internal static class Program
                     _currentRadius = Math.Min(InitialRadius, _effectiveMaxRadius);
                     _targetRadius = _currentRadius;
                     Pinch.Begin(_center.X, _center.Y, _currentRadius);
+                    UpdateMarkers(_center.X, _center.Y, _currentRadius);
                     AnimationTimer.Start();
                     if (VerboseLogging)
                     {
@@ -147,6 +167,7 @@ internal static class Program
                     AnimationTimer.Stop();
                     _pendingRelayDown = false;
                     Pinch.End();
+                    HideMarkers();
                     return (IntPtr)1;
                 }
                 if (msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN)
@@ -202,6 +223,8 @@ internal static class Program
         {
             Pinch.End();
         }
+        LeftMarker.Dispose();
+        RightMarker.Dispose();
         if (_keyboardHookHandle != IntPtr.Zero)
         {
             NativeMethods.UnhookWindowsHookEx(_keyboardHookHandle);
