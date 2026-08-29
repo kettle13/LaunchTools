@@ -14,7 +14,7 @@ internal static class Program
     private const double ZoomFactorPerNotch = 1.08; // ホイール1ノッチ(120)あたりの倍率
     private const double EaseFactor = 0.35;          // タイマー1tickごとの追従率
     private const int TickIntervalMs = 16;           // ~60Hz
-    private const bool VerboseLogging = true;        // 半径の遷移をコンソールに出力(調整用)
+    private const bool VerboseLogging = false;        // 半径の遷移をコンソールに出力(調整用。WinExeのため既定では見えない)
     private const double RelayMargin = 10.0;          // Min/Max からこの距離まで来たらリレー(離して再タップ)
 
     private static readonly Settings AppSettings = Settings.Load();
@@ -49,7 +49,11 @@ internal static class Program
 
         if (!NativeMethods.InitializeTouchInjection(2, NativeMethods.TOUCH_FEEDBACK_NONE))
         {
-            Console.WriteLine($"InitializeTouchInjection に失敗しました: 0x{Marshal.GetLastWin32Error():X8}");
+            System.Windows.Forms.MessageBox.Show(
+                $"InitializeTouchInjection に失敗しました: 0x{Marshal.GetLastWin32Error():X8}",
+                "PinchZoomInjector",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Error);
             return;
         }
 
@@ -59,22 +63,18 @@ internal static class Program
 
         if (_keyboardHookHandle == IntPtr.Zero || _mouseHookHandle == IntPtr.Zero)
         {
-            Console.WriteLine($"フックの登録に失敗しました: 0x{Marshal.GetLastWin32Error():X8}");
+            System.Windows.Forms.MessageBox.Show(
+                $"フックの登録に失敗しました: 0x{Marshal.GetLastWin32Error():X8}",
+                "PinchZoomInjector",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Error);
             Cleanup();
             return;
         }
 
         AnimationTimer.Tick += (_, _) => AnimationTick();
 
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            Cleanup();
-            Environment.Exit(0);
-        };
-
-        Console.WriteLine($"起動しました。{AppSettings.TriggerKey} を押しながらホイールでピンチズーム、Ctrl+C で終了します。");
-        System.Windows.Forms.Application.Run();
+        System.Windows.Forms.Application.Run(new TrayApplicationContext(Cleanup));
     }
 
     private static void UpdateMarkers(int centerX, int centerY, double radius)
