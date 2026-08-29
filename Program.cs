@@ -27,6 +27,7 @@ internal static class Program
     private static readonly TouchMarkerWindow RightMarker = new(Color.DodgerBlue);
 
     private static bool _triggerKeyDown;
+    private static bool _touchStarted; // ホイールが来て実際に Pinch.Begin() 済みかどうか
     private static POINT _center;
     private static double _currentRadius;
     private static double _targetRadius;
@@ -151,27 +152,32 @@ internal static class Program
                 int msg = wParam.ToInt32();
                 if ((msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN) && !_triggerKeyDown)
                 {
+                    // ここではまだタッチダウンしない。押してすぐ離すだけの操作で
+                    // 2本指タップ(=右クリック相当)と誤認識されるのを避けるため、
+                    // 実際にホイールが来た時点(MouseHookCallback)で初めて Begin() する。
                     _triggerKeyDown = true;
+                    _touchStarted = false;
                     NativeMethods.GetCursorPos(out _center);
                     _effectiveMaxRadius = ComputeMaxRadiusForCenter(_center);
                     _currentRadius = Math.Min(InitialRadius, _effectiveMaxRadius);
                     _targetRadius = _currentRadius;
-                    Pinch.Begin(_center.X, _center.Y, _currentRadius);
-                    UpdateMarkers(_center.X, _center.Y, _currentRadius);
-                    AnimationTimer.Start();
                     if (VerboseLogging)
                     {
-                        Console.WriteLine($"[Begin] center=({_center.X},{_center.Y}) effectiveMaxRadius={_effectiveMaxRadius:F1}");
+                        Console.WriteLine($"[Armed] center=({_center.X},{_center.Y}) effectiveMaxRadius={_effectiveMaxRadius:F1}");
                     }
                     return (IntPtr)1; // トリガーキー自体は他アプリに伝播させない
                 }
                 if ((msg == NativeMethods.WM_KEYUP || msg == NativeMethods.WM_SYSKEYUP) && _triggerKeyDown)
                 {
                     _triggerKeyDown = false;
-                    AnimationTimer.Stop();
-                    _pendingRelayDown = false;
-                    Pinch.End();
-                    HideMarkers();
+                    if (_touchStarted)
+                    {
+                        AnimationTimer.Stop();
+                        _pendingRelayDown = false;
+                        Pinch.End();
+                        HideMarkers();
+                    }
+                    _touchStarted = false;
                     return (IntPtr)1;
                 }
                 if (msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN)
@@ -190,6 +196,18 @@ internal static class Program
         {
             var info = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
             short delta = unchecked((short)((info.mouseData >> 16) & 0xFFFF));
+
+            if (!_touchStarted)
+            {
+                _touchStarted = true;
+                Pinch.Begin(_center.X, _center.Y, _currentRadius);
+                UpdateMarkers(_center.X, _center.Y, _currentRadius);
+                AnimationTimer.Start();
+                if (VerboseLogging)
+                {
+                    Console.WriteLine($"[Begin] center=({_center.X},{_center.Y}) effectiveMaxRadius={_effectiveMaxRadius:F1}");
+                }
+            }
 
             _targetRadius *= Math.Pow(ZoomFactorPerNotch, delta / 120.0);
             _targetRadius = Math.Clamp(_targetRadius, MinRadius, _effectiveMaxRadius);
