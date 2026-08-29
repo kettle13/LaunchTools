@@ -85,8 +85,6 @@ internal static class NativeMethods
     public const int WM_SYSKEYUP = 0x0105;
     public const int WM_MOUSEWHEEL = 0x020A;
 
-    public const int VK_F13 = 0x7C;
-
     public const int PT_TOUCH = 2;
 
     public const uint POINTER_FLAG_NONE = 0x00000000;
@@ -140,4 +138,13 @@ internal static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern uint GetPrivateProfileString(
+        string lpAppName,
+        string lpKeyName,
+        string lpDefault,
+        System.Text.StringBuilder lpReturnedString,
+        uint nSize,
+        string lpFileName);
 }

@@ -17,14 +17,16 @@ internal static class Program
     private const bool VerboseLogging = true;        // 半径の遷移をコンソールに出力(調整用)
     private const double RelayMargin = 10.0;          // Min/Max からこの距離まで来たらリレー(離して再タップ)
 
+    private static readonly Settings AppSettings = Settings.Load();
     private static readonly PinchSimulator Pinch = new();
     private static readonly System.Windows.Forms.Timer AnimationTimer = new() { Interval = TickIntervalMs };
 
-    // 解析用: 実際に注入している2点のタッチ座標を可視化するマーカー
+    // 解析用: 実際に注入している2点のタッチ座標を可視化するマーカー(PinchZoomInjector.ini の
+    // ShowTouchMarkers=true で有効化)
     private static readonly TouchMarkerWindow LeftMarker = new(Color.Red);
     private static readonly TouchMarkerWindow RightMarker = new(Color.DodgerBlue);
 
-    private static bool _f13Down;
+    private static bool _triggerKeyDown;
     private static POINT _center;
     private static double _currentRadius;
     private static double _targetRadius;
@@ -70,18 +72,20 @@ internal static class Program
             Environment.Exit(0);
         };
 
-        Console.WriteLine("起動しました。F13 を押しながらホイールでピンチズーム、Ctrl+C で終了します。");
+        Console.WriteLine($"起動しました。{AppSettings.TriggerKey} を押しながらホイールでピンチズーム、Ctrl+C で終了します。");
         System.Windows.Forms.Application.Run();
     }
 
     private static void UpdateMarkers(int centerX, int centerY, double radius)
     {
+        if (!AppSettings.ShowTouchMarkers) return;
         LeftMarker.MoveToCenter(centerX - (int)radius, centerY);
         RightMarker.MoveToCenter(centerX + (int)radius, centerY);
     }
 
     private static void HideMarkers()
     {
+        if (!AppSettings.ShowTouchMarkers) return;
         LeftMarker.HideMarker();
         RightMarker.HideMarker();
     }
@@ -142,12 +146,12 @@ internal static class Program
         if (nCode >= 0)
         {
             var info = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
-            if (info.vkCode == NativeMethods.VK_F13)
+            if (info.vkCode == AppSettings.TriggerVirtualKeyCode)
             {
                 int msg = wParam.ToInt32();
-                if ((msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN) && !_f13Down)
+                if ((msg == NativeMethods.WM_KEYDOWN || msg == NativeMethods.WM_SYSKEYDOWN) && !_triggerKeyDown)
                 {
-                    _f13Down = true;
+                    _triggerKeyDown = true;
                     NativeMethods.GetCursorPos(out _center);
                     _effectiveMaxRadius = ComputeMaxRadiusForCenter(_center);
                     _currentRadius = Math.Min(InitialRadius, _effectiveMaxRadius);
@@ -159,11 +163,11 @@ internal static class Program
                     {
                         Console.WriteLine($"[Begin] center=({_center.X},{_center.Y}) effectiveMaxRadius={_effectiveMaxRadius:F1}");
                     }
-                    return (IntPtr)1; // F13 自体は他アプリに伝播させない
+                    return (IntPtr)1; // トリガーキー自体は他アプリに伝播させない
                 }
-                if ((msg == NativeMethods.WM_KEYUP || msg == NativeMethods.WM_SYSKEYUP) && _f13Down)
+                if ((msg == NativeMethods.WM_KEYUP || msg == NativeMethods.WM_SYSKEYUP) && _triggerKeyDown)
                 {
-                    _f13Down = false;
+                    _triggerKeyDown = false;
                     AnimationTimer.Stop();
                     _pendingRelayDown = false;
                     Pinch.End();
@@ -182,7 +186,7 @@ internal static class Program
 
     private static IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && wParam.ToInt32() == NativeMethods.WM_MOUSEWHEEL && _f13Down)
+        if (nCode >= 0 && wParam.ToInt32() == NativeMethods.WM_MOUSEWHEEL && _triggerKeyDown)
         {
             var info = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
             short delta = unchecked((short)((info.mouseData >> 16) & 0xFFFF));
