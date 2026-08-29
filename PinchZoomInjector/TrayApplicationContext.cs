@@ -4,31 +4,36 @@ using System.Windows.Forms;
 namespace PinchZoomInjector;
 
 /// <summary>
-/// コンソールを持たない常駐アプリとして、タスクトレイにアイコンを表示する。
-/// 右クリックメニューは「終了」のみ。
+/// コンソールを持たない常駐アプリとして動作させる。単独起動時(showTrayIcon=true)は
+/// タスクトレイにアイコンを表示し、右クリックメニューの「終了」から終了できる。
+/// LaunchTools経由での起動時(showTrayIcon=false)はアイコンを出さず、
+/// LaunchToolsIntegration からの終了シグナルで ExitApplication() が呼ばれるのを待つ。
 /// </summary>
 internal sealed class TrayApplicationContext : ApplicationContext
 {
-    private readonly NotifyIcon _trayIcon;
+    private readonly NotifyIcon? _trayIcon;
     private readonly Action _onExit;
 
-    public TrayApplicationContext(Action onExit)
+    public TrayApplicationContext(Action onExit, bool showTrayIcon)
     {
         _onExit = onExit;
 
-        var menu = new ContextMenuStrip();
-        menu.Items.Add("終了", null, (_, _) => ExitApplication());
-
-        _trayIcon = new NotifyIcon
+        if (showTrayIcon)
         {
-            Icon = CreateIcon(),
-            Text = "PinchZoomInjector",
-            ContextMenuStrip = menu,
-            Visible = true,
-        };
+            var menu = new ContextMenuStrip();
+            menu.Items.Add("終了", null, (_, _) => ExitApplication());
+
+            _trayIcon = new NotifyIcon
+            {
+                Icon = CreateIcon(),
+                Text = "PinchZoomInjector",
+                ContextMenuStrip = menu,
+                Visible = true,
+            };
+        }
     }
 
-    private void ExitApplication()
+    public void ExitApplication()
     {
         _onExit();
         ExitThread();
@@ -36,8 +41,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     protected override void ExitThreadCore()
     {
-        _trayIcon.Visible = false;
-        _trayIcon.Dispose();
+        if (_trayIcon is not null)
+        {
+            _trayIcon.Visible = false;
+            _trayIcon.Dispose();
+        }
         base.ExitThreadCore();
     }
 

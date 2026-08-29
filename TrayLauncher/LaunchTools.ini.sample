@@ -1,0 +1,8 @@
+; TrayLauncher.exe と同じディレクトリに LaunchTools.ini としてコピーして使う。
+; セクション名 [App:Name] の Name は機能アプリの実行ファイル名(拡張子なし)と
+; 一致させること。Mutex/終了シグナルの名前解決に使われる。
+
+[App:PinchZoomInjector]
+DisplayName=Pinch Zoom Injector
+Path=C:\Users\Developer\Documents\Claude\LaunchTools\PinchZoomInjector\bin\Release\net10.0-windows\PinchZoomInjector.exe
+Args=--no-tray

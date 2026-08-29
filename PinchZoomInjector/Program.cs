@@ -41,8 +41,16 @@ internal static class Program
     private static IntPtr _mouseHookHandle;
 
     [STAThread]
-    private static void Main()
+    private static void Main(string[] args)
     {
+        if (!LaunchToolsIntegration.TryAcquireSingleInstance())
+        {
+            // 既に起動中(単独 or LaunchTools経由)なので、このプロセスは即終了する。
+            return;
+        }
+
+        bool noTray = args.Any(a => string.Equals(a, "--no-tray", StringComparison.OrdinalIgnoreCase));
+
         // ディスプレイスケーリング(125%/150%等)環境で GetCursorPos と
         // InjectTouchInput の座標系がズレないよう、最初に明示的に設定する。
         NativeMethods.SetProcessDpiAwarenessContext(NativeMethods.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -74,7 +82,19 @@ internal static class Program
 
         AnimationTimer.Tick += (_, _) => AnimationTick();
 
-        System.Windows.Forms.Application.Run(new TrayApplicationContext(Cleanup));
+        // LaunchTools からの終了シグナルはバックグラウンドスレッドで受け取るため、
+        // UIスレッド(ここ)への確実なマーシャリング用に明示的にコンテキストを用意しておく。
+        var uiContext = new System.Windows.Forms.WindowsFormsSynchronizationContext();
+        System.Threading.SynchronizationContext.SetSynchronizationContext(uiContext);
+
+        var trayContext = new TrayApplicationContext(Cleanup, showTrayIcon: !noTray);
+
+        if (noTray)
+        {
+            LaunchToolsIntegration.StartExitSignalListener(() => uiContext.Post(_ => trayContext.ExitApplication(), null));
+        }
+
+        System.Windows.Forms.Application.Run(trayContext);
     }
 
     private static void UpdateMarkers(int centerX, int centerY, double radius)
