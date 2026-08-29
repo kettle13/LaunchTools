@@ -11,6 +11,7 @@ internal sealed class AppConfig
     public required string DisplayName { get; init; }
     public required string Path { get; init; }
     public string Args { get; init; } = string.Empty;
+    public bool AutoRun { get; init; }
 
     public static IReadOnlyList<AppConfig> LoadAll(IniFile ini)
     {
@@ -31,12 +32,15 @@ internal sealed class AppConfig
                 continue;
             }
 
+            bool.TryParse(ini.GetValue(section, "AutoRun"), out bool autoRun);
+
             result.Add(new AppConfig
             {
                 Name = name,
                 DisplayName = ini.GetValue(section, "DisplayName") ?? name,
                 Path = path,
                 Args = ini.GetValue(section, "Args") ?? string.Empty,
+                AutoRun = autoRun,
             });
         }
 

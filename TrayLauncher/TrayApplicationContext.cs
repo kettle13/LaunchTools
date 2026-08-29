@@ -30,6 +30,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
             ContextMenuStrip = _menu,
             Visible = true,
         };
+
+        foreach (ManagedApp app in _apps.Where(a => a.Config.AutoRun))
+        {
+            app.Start(_jobManager);
+        }
     }
 
     private void RebuildMenu()

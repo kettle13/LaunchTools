@@ -6,3 +6,5 @@
 DisplayName=Pinch Zoom Injector
 Path=C:\Users\Developer\Documents\Claude\LaunchTools\PinchZoomInjector\bin\Release\net10.0-windows\PinchZoomInjector.exe
 Args=--no-tray
+; true にすると TrayLauncher 起動時にこのアプリも自動起動する(既定は false)
+AutoRun=false
