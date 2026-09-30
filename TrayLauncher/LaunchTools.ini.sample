@@ -8,3 +8,10 @@ Path=C:\Users\Developer\Documents\Claude\LaunchTools\PinchZoomInjector\bin\Relea
 Args=--no-tray
 ; true にすると TrayLauncher 起動時にこのアプリも自動起動する(既定は false)
 AutoRun=false
+
+[App:F23Mute]
+DisplayName=F23 Mute
+Path=C:\Users\Developer\Documents\Claude\LaunchTools\F23Mute\bin\Release\net10.0-windows\F23Mute.exe
+; --device <名前> でミュート対象の再生デバイスを指定(部分一致、複数指定可)。省略時は既定の再生デバイス
+Args=--no-tray --device "HiBy FC4"
+AutoRun=false

@@ -1,4 +1,7 @@
 <Solution>
+  <Project Path="F23Mute/F23Mute.csproj">
+    <Platform Project="x64" />
+  </Project>
   <Project Path="PinchZoomInjector/PinchZoomInjector.csproj" />
   <Project Path="TrayLauncher/TrayLauncher.csproj">
     <Platform Project="x64" />
